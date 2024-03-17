@@ -1,5 +1,3 @@
-#----------------------------------ООП----------------------------------
-
 #----------------------------------Представление и мини пример
 
 '''
@@ -83,6 +81,8 @@ print(a.summa(), b.summa())
 
 #----------------------------------Магические методы
 
+# Магические методы еще называют dunder-методами (от сокращения double underscope - двойное подчёркивание)
+
 # __init__(self) - вызывается сразу после создания экземпляра класса
 
 # __del__(self) - вызывается сразу после удаления экземпляра класса (финализатор)
@@ -103,6 +103,26 @@ print(a.summa(), b.summa())
 # можно применить так: чтобы не было ошибки можно написать return False внутри метода
 
 # __delattr__(self, item) - вызывается, когда удаляется атрибут из экземпляра класса
+
+# __call__(self, *args, **kwargs) - вызывается при вызове объекта класса через ()
+# Простое оформление:
+# obj = self.__new__(self, *args, **kwargs)
+# self.__init__(obj, *args, **kwargs)
+# return obj
+# Классы с этим методом - функторы (можно вызывать их объекты)
+# Можем дополнительно указывать какие-либо аргументы и использовать их
+# Метод может использоваться для замены замыканий функций или декораторов функций
+
+# __str__(self) - срабатывает в момент отображения информации об объекте класса (print, str) для пользователя
+
+# __repr__(self) - срабатывает в момент отображения информации об объекте класса (при отладке) для разработчика
+# Работает в режиме отладки
+
+# __len__(self) - позволяет применять len() к объектам класса
+# Другими словами: срабатывает когда используем len() к объекту класса
+
+# __abs__(self) - позволяет применять abs() к объектам класса
+# Другими словами: срабатывает когда используем abs() к объекту класса
 
 
 # class A:
@@ -133,14 +153,80 @@ print(a.summa(), b.summa())
 # 		print("__delattr__:", item)
 # 		object.__delattr__(self, item) # чтобы атрибут удалился
 
+# 	def __call__(self, *args, **kwargs):
+# 		print("__call__")
+	
+# 	def __repr__(self):
+# 		print("__repr__")
+# 		return f"{self.__class__}: {self.a}, {self.b}"
+
+# 	def __str__(self):
+# 		print("__str__")
+# 		return f"{self.a}, {self.b}"
+
+# 	def __len__(self):
+# 		print("__len__")
+# 		return len(self.__dict__)
+
+# 	def __abs__(self):
+# 		print("__abs__")
+# 		return abs(self.a), abs(self.b)
+
 
 # pt1 = A(3, 5) # __new__ __init__ __setattr__ __setattr__
-# # два вызоова __setattr__, так как в инит два раза присвоили новые значения
+# два вызова __setattr__, так как в инит два раза присвоили новые значения
 
 # pt1.b # __getattribute__
 # pt1.new # __getattribute__ __getattr__
 
+# pt1() # __call__
+
+# print(pt1) # __str__ __getattribute__ __getattribute__
+
+# print(len(pt1)) # __len__ __getattribute__
+# print(abs(pt1)) # __abs__ __getattribute__ __getattribute__
+
 # del pt1.b # __delattr__
+
+
+#----------------------------------Примеры для магических методов
+
+# __call__
+
+# class StripChars:
+# 	"Удаляет символы в начале и конце строки"
+# 	def __init__(self, chars):
+# 		self.__chars = chars
+	
+# 	def __call__(self, *args, **kwargs):
+# 		if not isinstance(args[0], str):
+# 			raise TypeError("Аргумент должен быть строкой")
+		
+# 		return args[0].strip(self.__chars)
+
+
+# s = StripChars("!,.? ;:")
+# res = s("  Python!! .")
+# print(res)
+
+
+# from math import sin, pi
+
+# class Derivate:
+# 	"Класс-декоратор, вычисляющий производные определённой функции в некой точке x"
+# 	def __init__(self, func):
+# 		self.__fn = func
+	
+# 	def __call__(self, x, dx=0.0001, *args, **kwargs):
+# 		return (self.__fn(x + dx) - self.__fn(x)) / dx
+
+
+# @Derivate # По другому: df_sin = Derivate(df_sin) # df_sin ссылается на объект класса Derivate
+# def df_sin(x):
+# 	return sin(x)
+
+
+# print(df_sin(pi/3))
 
 
 #----------------------------------Декораторы classmethod и staticmethod
@@ -424,7 +510,59 @@ print(a.summa(), b.summa())
 #----------------------------------Дескрипторы (data descriptor и non-data descriptor)
 
 # non-data descriptor: если класс содержит магический метод __get__(self, instance, owner)
+# Может только считывать данные и имеет тот же преоритеть доступа, что и обычные атрибуты
 # data descriptor: если класс содержит дополнительно магический метод: 
 # __set__(self, instance, value) или __del__(self) или оба
-# 
-# 
+# Дескрипторы редко используют
+# Дескриптор - отдельный класс для улучшения читаемости кода (чтобы не писать одно и тоже)
+
+# Пример
+# class ReadIntX: # non-data descriptor
+# 	def __set_name__(self, owner, name):
+# 		self.name = "_x"
+
+# 	def __get__(self, instance, owner):
+# 		return getattr(instance, self.name)
+
+# class Intenger: # data descriptor
+# 	@classmethod
+# 	def verify_coord(cls, coord): # проверка на тип int
+# 		if type(coord) != int:
+# 			raise TypeError("Координата должна быть целым числом")
+
+# 	def __set_name__(self, owner, name): # метод вызывается при создании объекта
+# 		self.name = "_" + name
+# 	# self - сслыка на пространство имён x
+# 	# owner - сслыка на класс Point3D
+# 	# name - название объекта класса Intenger
+	
+# 	def __get__(self, instance, owner):
+# 		return instance.__dict__[self.name] # можно написать иначе: getattr(instance, self.name)
+# 	# self - сслыка на пространство имён x
+# 	# instance - ссылка на объект класса Point3D
+# 	# owner - сслыка на класс Point3D
+
+# 	def __set__(self, instance, value):
+# 		self. verify_coord(value)
+# 		instance.__dict__[self.name] = value # можно написать иначе: setattr(instance, self.name, value)
+# 	# self - сслыка на пространство имён x
+# 	# instance - ссылка на объект класса Point3D
+# 	# value - то, что присваиваем
+
+
+# class Point3D:
+# 	x = Intenger()
+# 	y = Intenger()
+# 	z = Intenger()
+# 	xr = ReadIntX()
+
+# 	def __init__(self, x, y, z):
+# 		self.x = x
+# 		self.y = y
+# 		self.z = z
+
+
+# pt = Point3D(1, 2, 3)
+# pt.xr = 5 # просто создали локальный атрибут, словно нет дескриптора. Преоритет такой же
+# # Преоритет у data descriptor больше, чем у локальных атрибутов
+# print(pt.__dict__, pt.xr)
